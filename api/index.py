@@ -4,6 +4,13 @@ import re
 from collections import defaultdict
 import os
 
+# Load .env for local development (no-op on Vercel)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
