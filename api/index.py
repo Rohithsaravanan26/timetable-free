@@ -94,6 +94,8 @@ PERIODS = {
     ("14:00", "15:00"): "P3",
     ("15:00", "16:00"): "P4",
     ("16:00", "17:00"): "P4",
+    ("17:00", "18:00"): "P4",
+    ("18:00", "19:00"): "P4",
 }
 
 # ======================
@@ -200,26 +202,39 @@ def parse_sections(raw_text: str) -> List[Section]:
     sections: List[Section] = []
 
     current_course: Optional[str] = None
+    pending_code: Optional[str] = None
     current_section = None
     time_slots = None
 
-    # -------------------------
-    # Heuristics
-    # -------------------------
-    def looks_like_course_name(line: str) -> bool:
-        if line.startswith(("UG -", "PG -")):
-            return False
+    NOISE_SUBSTRINGS = [
+        "courses offered", "all enrolled", "not enrolled", "type a subject",
+        "course overview", "full registration", "no. of attempts", "registration",
+        "date:", "no. of attempt", "credits]"
+    ]
+
+    def is_noise_line(line: str) -> bool:
+        low = line.lower()
+        if any(ns in low for ns in NOISE_SUBSTRINGS):
+            return True
+        if any(line.startswith(d) for d in DAYS):
+            return True
         if re.search(r"\d{2}:\d{2}", line):
+            return True
+        return False
+
+    def looks_like_section(line: str) -> bool:
+        return line.startswith(("UG -", "PG -")) and "," in line and "-" in line
+
+    def looks_like_fallback_course_name(line: str) -> bool:
+        if looks_like_section(line):
             return False
-        if any(x in line.lower() for x in ["date", "credits"]):
+        if is_noise_line(line):
             return False
         if line.isupper() and "-" in line:
             return False
         return len(line.split()) >= 2
 
-    def looks_like_section(line: str) -> bool:
-        return line.startswith(("UG -", "PG -")) and "," in line and "-" in line
-
+    CODE_RE = re.compile(r"^([0-9]{2}[A-Z]{2,}[0-9]{3})\s*\[.*?Credits?\]", re.I)
     TIME_RE = re.compile(r"(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})")
 
     def flush():
@@ -245,23 +260,31 @@ def parse_sections(raw_text: str) -> List[Section]:
     while i < len(lines):
         line = lines[i]
 
-        # ---- Course name detection ----
-        if looks_like_course_name(line):
-            flush()
-            current_course = line
+        # 1. Course code line (e.g. 19ME533 [4 Credits])
+        code_match = CODE_RE.match(line)
+        if code_match:
+            pending_code = code_match.group(1).upper()
             i += 1
             continue
 
-        # ---- Section header ----
+        # 2. Portal 'Course overview' followed by course name
+        if line.lower() == "course overview" and i + 1 < len(lines):
+            flush()
+            course_title = lines[i + 1].strip()
+            if pending_code:
+                current_course = f"{pending_code} - {course_title}"
+            else:
+                current_course = course_title
+            pending_code = None
+            i += 2
+            continue
+
+        # 3. Section header
         if looks_like_section(line):
             flush()
-
             parts = [p.strip() for p in line.split(",")]
             section_code = parts[1] if len(parts) > 1 else parts[0]
-
-            # faculty = last "-" part
             faculty = line.split("-")[-1].strip()
-
             current_section = {
                 "code": section_code,
                 "faculty": faculty,
@@ -270,22 +293,26 @@ def parse_sections(raw_text: str) -> List[Section]:
             i += 1
             continue
 
-        # ---- Day + Time lines ----
+        # 4. Day + Time lines
         if current_section:
             for day in DAYS:
                 if line.startswith(day):
                     ranges = TIME_RE.findall(line)
-
-                    # Two 1-hour slots → ONE period
                     periods_seen = set()
                     for start, end in ranges:
                         if (start, end) in PERIODS:
                             periods_seen.add(PERIODS[(start, end)])
-
                     for p in periods_seen:
                         if p not in time_slots[day]:
                             time_slots[day].append(p)
                     break
+
+        # 5. Fallback course name for standard/simple timetable format
+        if looks_like_fallback_course_name(line):
+            flush()
+            current_course = line
+            i += 1
+            continue
 
         i += 1
 
