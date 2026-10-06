@@ -13,6 +13,11 @@
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "api/index.py" },
+    { "src": "/courses", "dest": "api/index.py" },
+    { "src": "/generate", "dest": "api/index.py" },
+    { "src": "/faculty/(.*)", "dest": "api/index.py" },
+    { "src": "/review", "dest": "api/index.py" },
+    { "src": "/health", "dest": "api/index.py" },
     { "src": "/(.*)", "dest": "public/$1" }
   ],
   "env": {

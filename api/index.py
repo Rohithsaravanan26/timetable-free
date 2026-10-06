@@ -11,7 +11,7 @@ try:
 except ImportError:
     pass
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -511,11 +511,13 @@ def serve_index():
     return HTMLResponse(content="<h1>Timetable Predictor API</h1>")
 
 
+@app.get("/health")
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
 
 
+@app.post("/courses", response_model=List[CourseSummary])
 @app.post("/api/courses", response_model=List[CourseSummary])
 def get_courses(req: CoursesRequest):
     sections = parse_sections(req.raw_text)
@@ -536,112 +538,97 @@ def get_courses(req: CoursesRequest):
     ]
 
 
+@app.post("/generate", response_model=List[GenerateResponseItem])
 @app.post("/api/generate", response_model=List[GenerateResponseItem])
-def generate(req: GenerateRequest):
+def generate(req: GenerateRequest, db: Session = Depends(get_db)):
     """Generate ranked, clash-free timetable options. Completely free, no login required."""
-    db: Session = next(get_db())
-    try:
-        sections = parse_sections(req.raw_text)
-        for s in sections:
-            s.faculty_rating = get_faculty_rating_db(db, s.faculty_name)
+    sections = parse_sections(req.raw_text)
+    for s in sections:
+        s.faculty_rating = get_faculty_rating_db(db, s.faculty_name)
 
-        results = build_best_timetables(sections, req.chosen_courses, req.preferences, req.top_k)
+    results = build_best_timetables(sections, req.chosen_courses, req.preferences, req.top_k)
 
-        if not results:
-            raise HTTPException(
-                status_code=400,
-                detail="No valid timetable found without clashes. Try changing preferences or courses.",
-            )
-        return results
-    finally:
-        db.close()
+    if not results:
+        raise HTTPException(
+            status_code=400,
+            detail="No valid timetable found without clashes. Try changing preferences or courses.",
+        )
+    return results
 
 
+@app.get("/faculty/search")
 @app.get("/api/faculty/search")
-def search_faculty(q: str):
+def search_faculty(q: str, db: Session = Depends(get_db)):
     if not q or len(q.strip()) < 2:
         return []
-    db: Session = next(get_db())
-    try:
-        q_upper = q.strip().upper()
-        faculties = (
-            db.query(Faculty)
-            .filter(Faculty.name.contains(q_upper))
-            .order_by(Faculty.name)
-            .limit(10)
-            .all()
-        )
-        return [{"id": f.id, "name": f.name} for f in faculties]
-    finally:
-        db.close()
+    q_upper = q.strip().upper()
+    faculties = (
+        db.query(Faculty)
+        .filter(Faculty.name.contains(q_upper))
+        .order_by(Faculty.name)
+        .limit(10)
+        .all()
+    )
+    return [{"id": f.id, "name": f.name} for f in faculties]
 
 
+@app.get("/faculty/{faculty_id}/courses")
 @app.get("/api/faculty/{faculty_id}/courses")
-def get_faculty_courses(faculty_id: int):
-    db: Session = next(get_db())
-    try:
-        courses = (
-            db.query(Review.course_code, Review.course_title)
-            .filter(Review.faculty_id == faculty_id, Review.course_code.isnot(None))
-            .distinct()
-            .all()
-        )
-        return [{"course_code": c.course_code, "course_title": c.course_title} for c in courses]
-    finally:
-        db.close()
+def get_faculty_courses(faculty_id: int, db: Session = Depends(get_db)):
+    courses = (
+        db.query(Review.course_code, Review.course_title)
+        .filter(Review.faculty_id == faculty_id, Review.course_code.isnot(None))
+        .distinct()
+        .all()
+    )
+    return [{"course_code": c.course_code, "course_title": c.course_title} for c in courses]
 
 
+@app.post("/review")
 @app.post("/api/review")
-def submit_review(review: ReviewIn):
+def submit_review(review: ReviewIn, db: Session = Depends(get_db)):
     """Anonymous faculty review — no login required."""
     if review.rating < 1 or review.rating > 5:
         raise HTTPException(status_code=400, detail="Rating must be between 1 and 5")
 
-    db: Session = next(get_db())
-    try:
-        faculty_name = normalize_faculty_name(review.faculty_name)
-        faculty = db.query(Faculty).filter(Faculty.name == faculty_name).first()
-        if not faculty:
-            faculty = Faculty(name=faculty_name)
-            db.add(faculty)
-            db.commit()
-            db.refresh(faculty)
-
-        db.add(Review(
-            faculty_id=faculty.id,
-            rating=review.rating,
-            comment=review.comment,
-            course_code=review.course_code,
-            course_title=review.course_title,
-        ))
+    faculty_name = normalize_faculty_name(review.faculty_name)
+    faculty = db.query(Faculty).filter(Faculty.name == faculty_name).first()
+    if not faculty:
+        faculty = Faculty(name=faculty_name)
+        db.add(faculty)
         db.commit()
+        db.refresh(faculty)
 
-        avg = get_faculty_rating_db(db, faculty.name)
-        return {
-            "message": "Review recorded (anonymous)",
-            "faculty_name": faculty.name,
-            "avg_rating": avg,
-        }
-    finally:
-        db.close()
+    db.add(Review(
+        faculty_id=faculty.id,
+        rating=review.rating,
+        comment=review.comment,
+        course_code=review.course_code,
+        course_title=review.course_title,
+    ))
+    db.commit()
+
+    avg = get_faculty_rating_db(db, faculty.name)
+    return {
+        "message": "Review recorded (anonymous)",
+        "faculty_name": faculty.name,
+        "avg_rating": avg,
+    }
 
 
+@app.get("/faculty/{faculty_name}/reviews", response_model=FacultySummaryOut)
 @app.get("/api/faculty/{faculty_name}/reviews", response_model=FacultySummaryOut)
-def get_faculty_reviews(faculty_name: str):
-    db: Session = next(get_db())
-    try:
-        faculty_name = normalize_faculty_name(faculty_name)
-        faculty = db.query(Faculty).filter(Faculty.name == faculty_name).first()
-        if not faculty:
-            return FacultySummaryOut(
-                faculty_name=faculty_name,
-                avg_rating=0.0,
-                count=0,
-                summary="No student reviews yet for this faculty.",
-                breakdown={i: 0 for i in range(1, 6)},
-                reviews=[],
-            )
-        reviews = db.query(Review).filter(Review.faculty_id == faculty.id).all()
-        return build_faculty_summary(faculty_name, reviews)
-    finally:
-        db.close()
+def get_faculty_reviews(faculty_name: str, db: Session = Depends(get_db)):
+    faculty_name = normalize_faculty_name(faculty_name)
+    faculty = db.query(Faculty).filter(Faculty.name == faculty_name).first()
+    if not faculty:
+        return FacultySummaryOut(
+            faculty_name=faculty_name,
+            avg_rating=0.0,
+            count=0,
+            summary="No student reviews yet for this faculty.",
+            breakdown={i: 0 for i in range(1, 6)},
+            reviews=[],
+        )
+    reviews = db.query(Review).filter(Review.faculty_id == faculty.id).all()
+    return build_faculty_summary(faculty_name, reviews)
