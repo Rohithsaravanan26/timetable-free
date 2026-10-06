@@ -186,17 +186,26 @@ def normalize_faculty_name(name: str) -> str:
 
 
 def parse_sections(raw_text: str) -> List[Section]:
+    # -------------------------
+    # Preprocess
+    # -------------------------
     def clean(line: str) -> str:
         line = line.strip()
+        # Fix merged time ranges: 11:0012:00 → 11:00 12:00
         line = re.sub(r"(\d{2}:\d{2})(\d{2}:\d{2})", r"\1 \2", line)
         return line
 
     lines = [clean(l) for l in raw_text.splitlines() if clean(l)]
+
     sections: List[Section] = []
+
     current_course: Optional[str] = None
     current_section = None
     time_slots = None
 
+    # -------------------------
+    # Heuristics
+    # -------------------------
     def looks_like_course_name(line: str) -> bool:
         if line.startswith(("UG -", "PG -")):
             return False
@@ -229,34 +238,50 @@ def parse_sections(raw_text: str) -> List[Section]:
         current_section = None
         time_slots = None
 
+    # -------------------------
+    # Main parse loop
+    # -------------------------
     i = 0
     while i < len(lines):
         line = lines[i]
 
+        # ---- Course name detection ----
         if looks_like_course_name(line):
             flush()
             current_course = line
             i += 1
             continue
 
+        # ---- Section header ----
         if looks_like_section(line):
             flush()
+
             parts = [p.strip() for p in line.split(",")]
             section_code = parts[1] if len(parts) > 1 else parts[0]
+
+            # faculty = last "-" part
             faculty = line.split("-")[-1].strip()
-            current_section = {"code": section_code, "faculty": faculty}
+
+            current_section = {
+                "code": section_code,
+                "faculty": faculty,
+            }
             time_slots = {d: [] for d in DAYS}
             i += 1
             continue
 
+        # ---- Day + Time lines ----
         if current_section:
             for day in DAYS:
                 if line.startswith(day):
                     ranges = TIME_RE.findall(line)
+
+                    # Two 1-hour slots → ONE period
                     periods_seen = set()
                     for start, end in ranges:
                         if (start, end) in PERIODS:
                             periods_seen.add(PERIODS[(start, end)])
+
                     for p in periods_seen:
                         if p not in time_slots[day]:
                             time_slots[day].append(p)
