@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <title>Timetable Predictor · Free & Open</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="AI-powered clash-free timetable generator. Completely free, no login required. Paste your pre-enlistment data and get ranked timetable options instantly." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <!-- html2canvas for image export -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <style>
+    /* ═══════════════════════════════════════
+       DESIGN TOKENS
+    ═══════════════════════════════════════ */
+    :root {
+      --bg:          #020617;
+      --surface:     rgba(15,23,42,0.97);
+      --surface-2:   rgba(22,33,62,0.95);
+      --accent:      #6366f1;
+      --accent-2:    #a855f7;
+      --accent-glow: rgba(99,102,241,0.35);
+      --green:       #22c55e;
+      --red:         #f87171;
+      --text:        #e2e8f0;
+      --muted:       #94a3b8;
+      --border:      rgba(99,102,241,0.3);
+      --border-2:    rgba(148,163,184,0.15);
+      --radius-xl:   20px;
+      --radius-lg:   14px;
+      --radius-md:   10px;
+      --radius-sm:   6px;
+    }
+
+    [data-theme="light"] {
+      --bg:        #f1f5f9;
+      --surface:   rgba(255,255,255,0.97);
+      --surface-2: rgba(241,245,249,0.95);
+      --text:      #0f172a;
+      --muted:     #475569;
+      --border:    rgba(99,102,241,0.25);
+      --border-2:  rgba(15,23,42,0.12);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Inter", system-ui, sans-serif;
+      background: var(--bg);
+      background-image:
+        radial-gradient(ellipse at 15% 10%, rgba(99,102,241,0.12), transparent 45%),
+        radial-gradient(ellipse at 85% 5%,  rgba(168,85,247,0.09), transparent 40%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ═══════════════════════════════════════
+       HEADER
+    ═══════════════════════════════════════ */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(20px) saturate(1.4);
+      background: rgba(2,6,23,0.85);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    [data-theme="light"] header {
+      background: rgba(241,245,249,0.88);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+
+    .brand-text h1 {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .brand-text .tagline {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .free-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: rgba(34,197,94,0.15);
+      border: 1px solid rgba(34,197,94,0.4);
+      color: var(--green);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-theme {
+      background: var(--surface-2);
+      border: 1px solid var(--border-2);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 5px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .btn-theme:hover { border-color: var(--border); color: var(--text); }
+
+    /* ═══════════════════════════════════════
+       MAIN LAYOUT
+    ═══════════════════════════════════════ */
+    main {
+      flex: 1;
+      padding: 24px 20px 40px;
+      max-width: 1280px;
+      margin: 0 auto;
+      width: 100%;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 20px;
+    }
+
+    @media (max-width: 960px) {
+      main { grid-template-columns: 1fr; padding: 16px 12px 32px; }
+    }
+
+    /* ═══════════════════════════════════════
+       CARDS
+    ═══════════════════════════════════════ */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(99,102,241,0.05) inset,
+        0 20px 50px rgba(2,6,23,0.6);
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg,
+        transparent,
+        rgba(99,102,241,0.5) 30%,
+        rgba(168,85,247,0.4) 70%,
+        transparent
+      );
+      pointer-events: none;
+    }
+
+    .card > * { position: relative; }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      gap: 8px;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .step-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #fff;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .pill-tag {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border-2);
+      background: var(--surface-2);
+      color: var(--muted);
+    }
+
+    /* ═══════════════════════════════════════
+       FORM ELEMENTS
+    ═══════════════════════════════════════ */
+    .field-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    textarea, input[type="text"], input[type="number"] {
+      width: 100%;
+      background: rgba(2,6,23,0.6);
+      border: 1px solid var(--border-2);
+      border-radius: var(--radius-md);
+      color: var(--text);
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 12.5px;
+      padding: 10px 12px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    [data-theme="light"] textarea,
+    [data-theme="light"] input[type="text"],
+    [data-theme="light"] input[type="number"] {
+      background: rgba(241,245,249,0.8);
+    }
+
+    textarea:focus, input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+    }
+
+    textarea {
+      min-height: 170px;
+      resize: vertical;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    textarea::placeholder, input::placeholder {
+      color: rgba(148,163,184,0.5);
+      font-family: "Inter", system-ui, sans-serif;
+      font-size: 12px;
+    }
+
+    /* ═══════════════════════════════════════
+       BUTTONS
+    ═══════════════════════════════════════ */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: "Inter", system-ui, sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 8px 16px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+      color: #fff;
+      box-shadow: 0 4px 20px var(--accent-glow);
+    }
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 28px rgba(99,102,241,0.5);
+      filter: brightness(1.08);
+    }
+    .btn-primary:active:not(:disabled) { transform: translateY(0); }
+
+    .btn-secondary {
+      background: var(--surface-2);
+      color: var(--muted);
+      border: 1px solid var(--border-2);
+    }
+    .btn-secondary:hover:not(:disabled) {
+      border-color: var(--border);
+      color: var(--text);
+      background: rgba(99,102,241,0.1);
+    }
+
+    .btn:disabled { opacity: 0.45; cursor: default; }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    /* ═══════════════════════════════════════
+       DIVIDERS
+    ═══════════════════════════════════════ */
+    .divider {
+      height: 1px;
+      background: var(--border-2);
+      margin: 16px 0;
+    }
+
+    /* ═══════════════════════════════════════
+       PREFERENCES CHECKBOXES
+    ═══════════════════════════════════════ */
+    .prefs-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .pref-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border-2);
+      background: var(--surface-2);
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .pref-chip:has(input:checked) {
+      border-color: var(--accent);
+      background: rgba(99,102,241,0.15);
+      color: #a5b4fc;
+    }
+    .pref-chip input { width: 14px; height: 14px; accent-color: var(--accent); }
+
+    /* ═══════════════════════════════════════
+       SLIDERS
+    ═══════════════════════════════════════ */
+    .sliders-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 12px;
+    }
+    @media (max-width: 700px) { .sliders-grid { grid-template-columns: 1fr; } }
+
+    .slider-item label {
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    .slider-item label span { color: var(--accent); font-weight: 600; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+
+    /* ═══════════════════════════════════════
+       TWO-COL INPUTS
+    ═══════════════════════════════════════ */
+    .row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    @media (max-width: 500px) { .row-2 { grid-template-columns: 1fr; } }
+
+    /* ═══════════════════════════════════════
+       COURSES LIST
+    ═══════════════════════════════════════ */
+    .courses-box {
+      max-height: 220px;
+      overflow-y: auto;
+      border: 1px solid var(--border-2);
+      border-radius: var(--radius-lg);
+      background: rgba(2,6,23,0.5);
+      padding: 8px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    [data-theme="light"] .courses-box { background: rgba(241,245,249,0.6); }
+
+    .course-item {
+      padding: 8px 6px;
+      border-bottom: 1px solid var(--border-2);
+    }
+    .course-item:last-child { border-bottom: none; }
+
+    .course-item label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .course-item input[type="checkbox"] { accent-color: var(--accent); }
+
+    .section-tags {
+      margin-top: 4px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .tag {
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid var(--border-2);
+      background: var(--surface-2);
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .tag-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    /* ═══════════════════════════════════════
+       RESULTS
+    ═══════════════════════════════════════ */
+    .results-wrap {
+      max-height: 400px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .result-card {
+      border: 1px solid var(--border-2);
+      border-radius: var(--radius-lg);
+      padding: 12px;
+      margin-bottom: 10px;
+      background: rgba(15,23,42,0.8);
+      transition: border-color 0.2s;
+    }
+    .result-card.best-option {
+      border-color: rgba(34,197,94,0.7);
+      box-shadow: 0 0 0 1px rgba(34,197,94,0.3), 0 12px 36px rgba(22,163,74,0.2);
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 13px;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .score-pill {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(94,234,212,0.6);
+      background: rgba(20,184,166,0.1);
+      color: #5eead4;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+    th, td {
+      padding: 5px 6px;
+      border-bottom: 1px solid var(--border-2);
+      vertical-align: top;
+    }
+    th {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      background: rgba(2,6,23,0.4);
+    }
+    td.conflict { background: rgba(248,113,113,0.12); }
+
+    /* ═══════════════════════════════════════
+       FAVOURITES
+    ═══════════════════════════════════════ */
+    .favs-box {
+      border: 1px dashed var(--border-2);
+      border-radius: var(--radius-md);
+      padding: 8px 10px;
+      max-height: 110px;
+      overflow-y: auto;
+      font-size: 12px;
+    }
+    .fav-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 0;
+      border-bottom: 1px dashed var(--border-2);
+    }
+    .fav-item:last-child { border-bottom: none; }
+
+    /* ═══════════════════════════════════════
+       FACULTY REVIEW SECTION
+    ═══════════════════════════════════════ */
+    .faculty-dropdown {
+      position: absolute;
+      top: 100%; left: 0; right: 0;
+      z-index: 100;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      max-height: 170px;
+      overflow-y: auto;
+      box-shadow: 0 12px 32px rgba(2,6,23,0.7);
+    }
+    .faculty-dropdown div {
+      padding: 7px 12px;
+      font-size: 12.5px;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .faculty-dropdown div:hover { background: rgba(99,102,241,0.15); }
+
+    .faculty-panel {
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-2);
+      background: rgba(2,6,23,0.5);
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    .faculty-panel h4 { font-size: 13px; margin-bottom: 6px; }
+
+    .stars { color: #fbbf24; font-size: 14px; }
+
+    .breakdown-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      margin: 3px 0;
+    }
+    .breakdown-bar-bg {
+      flex: 1;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(99,102,241,0.15);
+      overflow: hidden;
+    }
+    .breakdown-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--green), #a3e635);
+    }
+
+    /* ═══════════════════════════════════════
+       TOAST
+    ═══════════════════════════════════════ */
+    .toast {
+      position: fixed;
+      bottom: 20px; right: 20px;
+      z-index: 200;
+      font-size: 13px;
+      padding: 10px 16px;
+      border-radius: 999px;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      backdrop-filter: blur(12px);
+      background: var(--surface);
+      border: 1px solid var(--border-2);
+      box-shadow: 0 16px 40px rgba(2,6,23,0.7);
+      animation: slideUp 0.25s ease;
+    }
+    .toast.success { border-color: rgba(34,197,94,0.6); color: #bbf7d0; }
+    .toast.error   { border-color: rgba(248,113,113,0.6); color: #fecaca; }
+
+    @keyframes slideUp {
+      from { transform: translateY(12px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+
+    /* ═══════════════════════════════════════
+       LOADING OVERLAY
+    ═══════════════════════════════════════ */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      backdrop-filter: blur(4px);
+      background: rgba(2,6,23,0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .overlay-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px 22px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+    }
+    .spinner {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      border: 3px solid rgba(99,102,241,0.2);
+      border-top-color: var(--accent);
+      animation: spin 0.75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ═══════════════════════════════════════
+       FOOTER
+    ═══════════════════════════════════════ */
+    footer {
+      text-align: center;
+      padding: 18px 16px 24px;
+      border-top: 1px solid var(--border-2);
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 2;
+    }
+    footer a {
+      color: var(--muted);
+      text-decoration: none;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: color 0.15s, background 0.15s;
+    }
+    footer a:hover { color: #a5b4fc; background: rgba(99,102,241,0.1); }
+    footer a + a::before { content: "·"; margin: 0 4px; opacity: 0.4; }
+
+    /* ═══════════════════════════════════════
+       MISC UTILITIES
+    ═══════════════════════════════════════ */
+    .muted  { color: var(--muted); }
+    .small  { font-size: 11.5px; color: var(--muted); }
+    .mt-6   { margin-top: 6px; }
+    .mt-10  { margin-top: 10px; }
+    .mt-12  { margin-top: 12px; }
+    .rel    { position: relative; }
+  </style>
+</head>
+<body>
+  <!-- ─── HEADER ─── -->
+  <header>
+    <div class="brand">
+      <div class="logo">📅</div>
+      <div class="brand-text">
+        <h1>Timetable Predictor</h1>
+        <div class="tagline">AI-ranked clash-free timetable · Mon–Sat · 4 slots/day</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span class="free-badge">✦ 100% Free</span>
+      <button class="btn-theme" onclick="toggleTheme()">🌓 Theme</button>
+    </div>
+  </header>
+
+  <!-- ─── MAIN GRID ─── -->
+  <main>
+
+    <!-- ═══ LEFT CARD ═══ -->
+    <section class="card" id="left-card">
+      <div class="card-header">
+        <h2 class="card-title">
+          <span class="step-badge">Step 1</span>
+          Paste timetable &amp; set preferences
+        </h2>
+        <span class="pill-tag">No login needed</span>
+      </div>
+
+      <!-- Textarea -->
+      <div>
+        <div class="field-label">📋 Pre-enlistment timetable text</div>
+        <textarea id="raw-text" placeholder="Paste the full timetable text here. Example format:
+
+Course Title
+
+UG - 5G2-1, SECTION CODE - Faculty Name
+Date: 05-11-2025 to 27-12-2025
+Monday: 10:00 - 11:00 11:00 - 12:00
+Tuesday: 13:00 - 14:00 14:00 - 15:00
+...
+
+Paste multiple courses one after another."></textarea>
+
+        <div class="btn-row mt-10">
+          <button class="btn btn-primary" id="scan-btn" onclick="loadCourses()">
+            🔍 Scan courses
+          </button>
+          <span class="small">We detect all courses, sections &amp; timings.</span>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Preferences -->
+      <div>
+        <div class="field-label">⚙️ Scheduling preferences</div>
+
+        <div class="prefs-grid">
+          <label class="pref-chip">
+            <input type="checkbox" id="avoidP1" />
+            <span>Avoid 8–10 AM</span>
+          </label>
+          <label class="pref-chip">
+            <input type="checkbox" id="avoidP2" />
+            <span>Avoid 10–12 AM</span>
+          </label>
+          <label class="pref-chip">
+            <input type="checkbox" id="avoidP3" />
+            <span>Avoid 1–3 PM</span>
+          </label>
+          <label class="pref-chip">
+            <input type="checkbox" id="avoidP4" />
+            <span>Avoid 3–5 PM</span>
+          </label>
+          <label class="pref-chip">
+            <input type="checkbox" id="prefer-weekend-off" checked />
+            <span>Prefer weekend off</span>
+          </label>
+        </div>
+
+        <div class="row-2 mt-12">
+          <div>
+            <div class="field-label">👍 Preferred faculty</div>
+            <input id="preferredFaculty" type="text" placeholder="e.g. NIMISHA JOHN, David R" />
+          </div>
+          <div>
+            <div class="field-label">⛔ Avoid faculty</div>
+            <input id="avoidFaculty" type="text" placeholder="e.g. Trainer 8" />
+          </div>
+        </div>
+
+        <div class="sliders-grid">
+          <div class="slider-item">
+            <label>Faculty importance <span id="fac-weight-label">0.6</span></label>
+            <input type="range" id="fac-weight" min="0" max="1" step="0.1" value="0.6" oninput="syncLabels()" />
+          </div>
+          <div class="slider-item">
+            <label>Free days importance <span id="free-weight-label">0.2</span></label>
+            <input type="range" id="free-weight" min="0" max="1" step="0.1" value="0.2" oninput="syncLabels()" />
+          </div>
+          <div class="slider-item">
+            <label>Timing importance <span id="time-weight-label">0.2</span></label>
+            <input type="range" id="time-weight" min="0" max="1" step="0.1" value="0.2" oninput="syncLabels()" />
+          </div>
+        </div>
+
+        <div style="margin-top:12px; max-width:160px;">
+          <div class="field-label">🗂 No. of options to show</div>
+          <input type="number" id="top-k" value="5" min="1" max="20" />
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ RIGHT CARD ═══ -->
+    <section class="card" id="right-card">
+      <div class="card-header">
+        <h2 class="card-title">
+          <span class="step-badge">Step 2</span>
+          Choose courses &amp; generate
+        </h2>
+        <span class="pill-tag">AI-ranked options</span>
+      </div>
+
+      <!-- Courses -->
+      <div class="field-label">Detected courses <span class="muted small">(tick the ones you'll enroll)</span></div>
+      <div id="courses-container" class="courses-box">
+        <p class="small" style="padding:6px 2px;">Paste your timetable on the left and click <strong>Scan courses</strong>.</p>
+      </div>
+
+      <div class="btn-row mt-12" style="justify-content:space-between;">
+        <div class="btn-row">
+          <button class="btn btn-primary" id="generate-btn" onclick="generateTimetables()">
+            ✨ Generate timetable
+          </button>
+          <button class="btn btn-secondary" onclick="highlightBest()">🏆 AI pick best</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-secondary" onclick="downloadPDF()">⬇ PDF</button>
+          <button class="btn btn-secondary" onclick="exportImage()">🖼 Image</button>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Results -->
+      <div class="field-label">
+        Results
+        <span class="tag"><span class="tag-dot"></span>conflicts marked red</span>
+      </div>
+      <div id="results" class="results-wrap"></div>
+
+      <!-- Favourites -->
+      <div class="mt-10">
+        <div class="small" style="margin-bottom:6px;">⭐ Favourites</div>
+        <div id="favorites-list" class="favs-box"><span class="muted">No favourites yet.</span></div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Faculty Reviews -->
+      <div>
+        <div class="field-label">🎓 Faculty reviews <span class="tag">Anonymous · No login</span></div>
+        <p class="small mt-6" style="margin-bottom:10px;">Share honest feedback. No account needed — reviews are fully anonymous.</p>
+
+        <div class="row-2">
+          <div class="rel">
+            <input id="review-faculty" type="text" placeholder="Start typing faculty name…" autocomplete="off" />
+            <div id="faculty-suggestions" class="faculty-dropdown" style="display:none;"></div>
+          </div>
+          <div>
+            <input id="review-rating" type="number" min="1" max="5" step="0.5" value="5" />
+          </div>
+        </div>
+        <div class="row-2 mt-10">
+          <input id="review-course-code"  type="text" placeholder="Course code (e.g. 19AI305)" />
+          <input id="review-course-title" type="text" placeholder="Course title" />
+        </div>
+        <div class="mt-10">
+          <textarea id="review-comment" style="min-height:70px;" placeholder="Teaching style, pace, support… Avoid personal info."></textarea>
+        </div>
+        <div class="btn-row mt-10">
+          <button class="btn btn-secondary" onclick="submitReview()">📨 Submit review</button>
+          <button class="btn btn-secondary" onclick="loadFacultySummary()">📊 View insights</button>
+        </div>
+        <div id="review-result" class="small mt-6"></div>
+
+        <div id="faculty-panel" class="faculty-panel" style="display:none;">
+          <h4 id="faculty-name-title">Faculty insights</h4>
+          <p class="small" id="faculty-summary-text"></p>
+          <div id="faculty-breakdown" class="mt-6"></div>
+          <div class="divider"></div>
+          <div id="faculty-reviews-list"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ─── FOOTER ─── -->
+  <footer>
+    Developed by
+    <a href="https://www.linkedin.com/in/rohith-saravanan-baa94637b" target="_blank" rel="noopener">Rohith Saravanan</a>
+    <a href="mailto:rohithsaravanan86@gmail.com">rohithsaravanan86@gmail.com</a>
+    <a href="/about.html">About</a>
+    <a href="/privacy-policy.html">Privacy Policy</a>
+    <a href="/terms.html">Terms</a>
+  </footer>
+
+  <!-- TOAST -->
+  <div id="toast" class="toast"></div>
+
+  <!-- LOADING OVERLAY -->
+  <div id="overlay" class="overlay">
+    <div class="overlay-card">
+      <div class="spinner"></div>
+      <span id="overlay-text">Working…</span>
+    </div>
+  </div>
+
+  <script>
+    // ═══════════════════════════════════════
+    //  CONFIG
+    // ═══════════════════════════════════════
+    const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    // In Vercel the frontend and backend share the same origin.
+    // /api/* routes go to FastAPI, everything else is static.
+    const API_BASE = "";  // same-origin — routes handled by vercel.json
+
+    let lastResults = [];
+
+    // ═══════════════════════════════════════
+    //  THEME
+    // ═══════════════════════════════════════
+    function toggleTheme() {
+      const root = document.documentElement;
+      const next = root.dataset.theme === "dark" ? "light" : "dark";
+      root.dataset.theme = next;
+      localStorage.setItem("tt-theme", next);
+    }
+
+    // ═══════════════════════════════════════
+    //  TOAST & LOADING
+    // ═══════════════════════════════════════
+    function showToast(msg, type = "success") {
+      const t = document.getElementById("toast");
+      t.textContent = msg;
+      t.className = "toast " + type;
+      t.style.display = "flex";
+      clearTimeout(t._timer);
+      t._timer = setTimeout(() => { t.style.display = "none"; }, 3200);
+    }
+
+    function setLoading(on, msg = "Working…") {
+      const ov = document.getElementById("overlay");
+      document.getElementById("overlay-text").textContent = msg;
+      ov.style.display = on ? "flex" : "none";
+    }
+
+    // ═══════════════════════════════════════
+    //  SLIDER LABELS
+    // ═══════════════════════════════════════
+    function syncLabels() {
+      document.getElementById("fac-weight-label").textContent  = document.getElementById("fac-weight").value;
+      document.getElementById("free-weight-label").textContent = document.getElementById("free-weight").value;
+      document.getElementById("time-weight-label").textContent = document.getElementById("time-weight").value;
+    }
+
+    // ═══════════════════════════════════════
+    //  SCAN COURSES
+    // ═══════════════════════════════════════
+    async function loadCourses() {
+      const rawText = document.getElementById("raw-text").value.trim();
+      if (!rawText) { showToast("Paste timetable text first", "error"); return; }
+
+      setLoading(true, "Scanning courses…");
+      try {
+        const res = await fetch(API_BASE + "/api/courses", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ raw_text: rawText })
+        });
+        if (!res.ok) { showToast("Failed to parse courses", "error"); return; }
+        const data = await res.json();
+        renderCourses(data);
+        showToast(`Found ${data.length} course(s)`, "success");
+      } catch (e) {
+        showToast("Network error: " + e.message, "error");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function renderCourses(courses) {
+      const box = document.getElementById("courses-container");
+      box.innerHTML = "";
+      if (!courses.length) {
+        box.innerHTML = "<p class='small'>No courses detected. Check your timetable text format.</p>";
+        return;
+      }
+      courses.forEach(course => {
+        const div = document.createElement("div");
+        div.className = "course-item";
+        const id = "c-" + course.course_name.replace(/\s+/g,"-").replace(/[^a-zA-Z0-9-]/g,"");
+        const tags = course.sections.map(s =>
+          `<span class="tag"><span class="tag-dot"></span>${s.faculty_name}</span>`
+        ).join("");
+        div.innerHTML = `
+          <label>
+            <input type="checkbox" id="${id}" data-course="${course.course_name}" />
+            <strong>${course.course_name}</strong>
+          </label>
+          <div class="section-tags">${tags}</div>
+        `;
+        box.appendChild(div);
+      });
+    }
+
+    function getSelected() {
+      return [...document.querySelectorAll("#courses-container input[type=checkbox]:checked")]
+        .map(i => i.dataset.course);
+    }
+
+    // ═══════════════════════════════════════
+    //  GENERATE
+    // ═══════════════════════════════════════
+    async function generateTimetables() {
+      const rawText = document.getElementById("raw-text").value.trim();
+      if (!rawText) { showToast("Paste timetable text first", "error"); return; }
+
+      const chosen = getSelected();
+      if (!chosen.length) { showToast("Select at least one course", "error"); return; }
+
+      const prefs = {
+        dislike_early:      document.getElementById("avoidP1").checked,
+        dislike_midmorning: document.getElementById("avoidP2").checked,
+        dislike_afternoon:  document.getElementById("avoidP3").checked,
+        dislike_evening:    document.getElementById("avoidP4").checked,
+        prefer_weekend_off: document.getElementById("prefer-weekend-off").checked,
+        preferred_faculty:  document.getElementById("preferredFaculty").value.split(",").map(v=>v.trim()).filter(Boolean),
+        avoid_faculty:      document.getElementById("avoidFaculty").value.split(",").map(v=>v.trim()).filter(Boolean),
+        faculty_weight:     parseFloat(document.getElementById("fac-weight").value),
+        free_days_weight:   parseFloat(document.getElementById("free-weight").value),
+        timing_weight:      parseFloat(document.getElementById("time-weight").value),
+      };
+
+      const top_k = parseInt(document.getElementById("top-k").value) || 5;
+
+      setLoading(true, "Generating clash-free options…");
+      try {
+        const res = await fetch(API_BASE + "/api/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ raw_text: rawText, chosen_courses: chosen, preferences: prefs, top_k })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          showToast(data.detail || "Failed to generate timetables", "error");
+          return;
+        }
+        lastResults = data;
+        renderResults(data);
+        showToast(`Generated ${data.length} option(s)`, "success");
+      } catch (e) {
+        showToast("Network error: " + e.message, "error");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    // ═══════════════════════════════════════
+    //  RENDER RESULTS
+    // ═══════════════════════════════════════
+    function renderResults(results) {
+      const box = document.getElementById("results");
+      box.innerHTML = "";
+      if (!results.length) {
+        box.innerHTML = "<p class='small'>No valid timetables without clashes.</p>";
+        return;
+      }
+
+      results.forEach((item, idx) => {
+        const div = document.createElement("div");
+        div.className = "result-card";
+        div.dataset.index = idx;
+
+        let rows = "";
+        DAYS.forEach(day => {
+          function cell(entries) {
+            if (!entries.length) return "<span style='color:var(--border-2)'>—</span>";
+            return entries.map(e =>
+              `<strong>${e.course}</strong><br><span class="small">${e.faculty}</span><br><span class="small" style="opacity:0.7;">${e.section}</span>`
+            ).join("<hr style='border:none;border-top:1px dashed var(--border-2);margin:4px 0;'/>");
+          }
+          const p1 = item.grid[day]["P1"] || [];
+          const p2 = item.grid[day]["P2"] || [];
+          const p3 = item.grid[day]["P3"] || [];
+          const p4 = item.grid[day]["P4"] || [];
+          rows += `<tr>
+            <td><strong>${day.slice(0,3)}</strong></td>
+            <td class="${p1.length>1?'conflict':''}">${cell(p1)}</td>
+            <td class="${p2.length>1?'conflict':''}">${cell(p2)}</td>
+            <td class="${p3.length>1?'conflict':''}">${cell(p3)}</td>
+            <td class="${p4.length>1?'conflict':''}">${cell(p4)}</td>
+          </tr>`;
+        });
+
+        div.innerHTML = `
+          <div class="result-header">
+            <span>Option #${idx+1}</span>
+            <div class="btn-row">
+              <button class="btn btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="saveFav(${idx})">⭐ Save</button>
+              <span class="score-pill">Score: ${item.score.toFixed(3)}</span>
+            </div>
+          </div>
+          <table>
+            <thead><tr><th>Day</th><th>8–10</th><th>10–12</th><th>1–3</th><th>3–5</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        `;
+        box.appendChild(div);
+      });
+      renderFavs();
+    }
+
+    function highlightBest() {
+      const cards = document.querySelectorAll(".result-card");
+      if (!cards.length) { showToast("Generate timetables first", "error"); return; }
+      cards.forEach(c => c.classList.remove("best-option"));
+      cards[0].classList.add("best-option");
+      cards[0].scrollIntoView({ behavior: "smooth", block: "center" });
+      showToast("Best option highlighted ✦", "success");
+    }
+
+    // ═══════════════════════════════════════
+    //  FAVOURITES
+    // ═══════════════════════════════════════
+    function saveFav(idx) {
+      if (!lastResults.length) { showToast("Generate first", "error"); return; }
+      const favs = JSON.parse(localStorage.getItem("tt-favs") || "[]");
+      favs.push({ savedAt: new Date().toISOString(), score: lastResults[idx].score, grid: lastResults[idx].grid });
+      localStorage.setItem("tt-favs", JSON.stringify(favs));
+      showToast("Saved to favourites", "success");
+      renderFavs();
+    }
+
+    function deleteFav(i) {
+      const favs = JSON.parse(localStorage.getItem("tt-favs") || "[]");
+      favs.splice(i, 1);
+      localStorage.setItem("tt-favs", JSON.stringify(favs));
+      renderFavs();
+    }
+
+    function renderFavs() {
+      const box = document.getElementById("favorites-list");
+      const favs = JSON.parse(localStorage.getItem("tt-favs") || "[]");
+      if (!favs.length) { box.innerHTML = '<span class="muted">No favourites yet.</span>'; return; }
+      box.innerHTML = "";
+      [...favs].reverse().forEach((f, i) => {
+        const el = document.createElement("div");
+        el.className = "fav-item";
+        el.innerHTML = `<span>#${favs.length-i} · Score ${f.score.toFixed(3)} · ${new Date(f.savedAt).toLocaleDateString()}</span>
+          <button class="btn btn-secondary" style="padding:3px 8px;font-size:10px;" onclick="deleteFav(${favs.length-i-1})">Remove</button>`;
+        box.appendChild(el);
+      });
+    }
+
+    // ═══════════════════════════════════════
+    //  EXPORT
+    // ═══════════════════════════════════════
+    function downloadPDF() {
+      const content = document.getElementById("results").innerHTML;
+      if (!content.trim()) { showToast("Generate a timetable first", "error"); return; }
+      const w = window.open("", "_blank");
+      w.document.write(`<html><head><title>Timetable</title>
+        <style>body{font-family:system-ui,sans-serif;padding:16px;}table{border-collapse:collapse;width:100%;font-size:12px;}
+        th,td{border:1px solid #ccc;padding:5px 7px;vertical-align:top;}th{background:#f3f4f6;}</style>
+        </head><body>${content}</body></html>`);
+      w.document.close(); w.focus(); w.print(); w.close();
+    }
+
+    function exportImage() {
+      const node = document.getElementById("results");
+      if (!node.innerHTML.trim()) { showToast("Generate a timetable first", "error"); return; }
+      html2canvas(node).then(canvas => {
+        const a = document.createElement("a");
+        a.download = "timetable.png";
+        a.href = canvas.toDataURL("image/png");
+        a.click();
+      }).catch(err => showToast("Export error: " + err.message, "error"));
+    }
+
+    // ═══════════════════════════════════════
+    //  FACULTY AUTOCOMPLETE
+    // ═══════════════════════════════════════
+    const facInput    = document.getElementById("review-faculty");
+    const facDropdown = document.getElementById("faculty-suggestions");
+
+    facInput.addEventListener("input", async () => {
+      const q = facInput.value.trim();
+      facDropdown.innerHTML = "";
+      facDropdown.style.display = "none";
+      if (q.length < 2) return;
+      try {
+        const res  = await fetch(API_BASE + "/api/faculty/search?q=" + encodeURIComponent(q));
+        const data = await res.json();
+        if (!data.length) return;
+        facDropdown.style.display = "block";
+        data.forEach(f => {
+          const div = document.createElement("div");
+          div.textContent = f.name;
+          div.onclick = async () => {
+            facInput.value = f.name;
+            facDropdown.style.display = "none";
+            // Auto-fill course fields
+            const r = await fetch(API_BASE + "/api/faculty/" + f.id + "/courses");
+            const cs = await r.json();
+            if (cs.length) {
+              document.getElementById("review-course-code").value  = cs[0].course_code  || "";
+              document.getElementById("review-course-title").value = cs[0].course_title || "";
+            }
+          };
+          facDropdown.appendChild(div);
+        });
+      } catch {}
+    });
+
+    document.addEventListener("click", e => {
+      if (!facInput.contains(e.target) && !facDropdown.contains(e.target)) {
+        facDropdown.style.display = "none";
+      }
+    });
+
+    // ═══════════════════════════════════════
+    //  SUBMIT REVIEW (ANONYMOUS)
+    // ═══════════════════════════════════════
+    async function submitReview() {
+      const faculty_name  = facInput.value.trim();
+      const rating        = parseFloat(document.getElementById("review-rating").value);
+      const comment       = document.getElementById("review-comment").value.trim();
+      const course_code   = document.getElementById("review-course-code").value.trim()  || null;
+      const course_title  = document.getElementById("review-course-title").value.trim() || null;
+
+      if (!faculty_name || isNaN(rating)) {
+        showToast("Enter faculty name and rating", "error"); return;
+      }
+      try {
+        const res  = await fetch(API_BASE + "/api/review", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ faculty_name, rating, comment, course_code, course_title })
+        });
+        const data = await res.json();
+        if (!res.ok) { showToast(data.detail || "Error saving review", "error"); return; }
+        document.getElementById("review-result").textContent =
+          `Saved anonymously. ${data.faculty_name} avg: ${data.avg_rating.toFixed(2)}/5`;
+        showToast("Review submitted (anonymous)", "success");
+      } catch (e) {
+        showToast("Network error: " + e.message, "error");
+      }
+    }
+
+    // ═══════════════════════════════════════
+    //  VIEW FACULTY INSIGHTS
+    // ═══════════════════════════════════════
+    async function loadFacultySummary() {
+      const name = facInput.value.trim();
+      if (!name) { showToast("Enter faculty name to view insights", "error"); return; }
+
+      try {
+        const res  = await fetch(API_BASE + "/api/faculty/" + encodeURIComponent(name) + "/reviews");
+        if (!res.ok) throw new Error("Server error " + res.status);
+        const data = await res.json();
+
+        document.getElementById("faculty-name-title").textContent = `${data.faculty_name} · Student reviews`;
+        document.getElementById("faculty-summary-text").innerHTML = `
+          <span class="stars">${"★".repeat(Math.round(data.avg_rating))}${"☆".repeat(5-Math.round(data.avg_rating))}</span>
+          <strong> ${data.avg_rating.toFixed(1)} / 5</strong> · ${data.count} rating(s)<br/>${data.summary || ""}
+        `;
+
+        const bd = document.getElementById("faculty-breakdown");
+        bd.innerHTML = "";
+        for (let s = 5; s >= 1; s--) {
+          const cnt = (data.breakdown && (data.breakdown[String(s)] || data.breakdown[s])) || 0;
+          const pct = data.count ? Math.round((cnt / data.count) * 100) : 0;
+          bd.innerHTML += `<div class="breakdown-bar-wrap">
+            <span>${s}★</span>
+            <div class="breakdown-bar-bg"><div class="breakdown-bar-fill" style="width:${pct}%"></div></div>
+            <span>${pct}%</span>
+          </div>`;
+        }
+
+        const rl = document.getElementById("faculty-reviews-list");
+        rl.innerHTML = "";
+        if (!data.reviews || !data.reviews.length) {
+          rl.innerHTML = "<p class='small'><i>No detailed reviews yet.</i></p>";
+        } else {
+          data.reviews.forEach(r => {
+            const p = document.createElement("p");
+            p.className = "small";
+            const parts = [];
+            if (r.course_code)  parts.push(r.course_code);
+            if (r.course_title) parts.push(r.course_title);
+            const date = r.created_at ? new Date(r.created_at).toLocaleDateString() : "";
+            p.innerHTML = `<strong>${r.rating.toFixed(1)}/5${parts.length ? " · " + parts.join(" – ") : ""}</strong>${date ? " · " + date : ""}<br/>${r.comment || "<i>No comment</i>"}`;
+            rl.appendChild(p);
+          });
+        }
+
+        document.getElementById("faculty-panel").style.display = "block";
+        showToast("Faculty insights loaded", "success");
+      } catch (err) {
+        showToast("Unable to load insights. Try again.", "error");
+      }
+    }
+
+    // ═══════════════════════════════════════
+    //  INIT
+    // ═══════════════════════════════════════
+    (function init() {
+      document.documentElement.dataset.theme = localStorage.getItem("tt-theme") || "dark";
+      syncLabels();
+      renderFavs();
+    })();
+  </script>
+</body>
+</html>

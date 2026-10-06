@@ -1,0 +1,12 @@
+{
+  "name": "timetable-predictor",
+  "version": "1.0.0",
+  "description": "Clash-free timetable generator — free, no login, Vercel + Supabase",
+  "scripts": {
+    "dev": "uvicorn api.index:app --reload --port 8000",
+    "install-py": "pip install -r api/requirements.txt"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
