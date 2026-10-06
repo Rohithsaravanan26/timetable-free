@@ -19,8 +19,5 @@
     { "src": "/review", "dest": "api/index.py" },
     { "src": "/health", "dest": "api/index.py" },
     { "src": "/(.*)", "dest": "public/$1" }
-  ],
-  "env": {
-    "DATABASE_URL": "@database_url"
-  }
+  ]
 }
