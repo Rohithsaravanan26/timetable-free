@@ -12,6 +12,7 @@ except ImportError:
     pass
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -475,6 +476,15 @@ def build_faculty_summary(faculty_name: str, reviews: List[Review]) -> FacultySu
 # ======================
 # API ENDPOINTS
 # ======================
+
+@app.get("/", response_class=HTMLResponse)
+def serve_index():
+    index_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "public", "index.html")
+    if os.path.exists(index_path):
+        with open(index_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse(content="<h1>Timetable Predictor API</h1>")
+
 
 @app.get("/api/health")
 def health():
